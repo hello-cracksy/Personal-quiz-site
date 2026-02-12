@@ -154,12 +154,23 @@ nav ul a:active {
             <option value="random">ランダム</option>
             <option value="sequential">順番どうり</option>
         </select>
+        <select id="inputMode" onchange="switchInputMode()">
+          <option value="paste">テキスト貼り付け</option>
+          <option value="file">ファイル読み込み</option>
+        </select>
+        <div id="pasteArea">
+        <textarea id="pasteInput" style="width:100%;height:140px;"></textarea>
+        </div>
+        
+        <div id="fileArea" style="display:none;">
+        <input type="file" id="fileInput" accept=".json">
+        </div>
+        
+        <button onclick="loadProblems()">問題読み込み</button>
+
         <button onclick="startTest()">スタート</button>
 
         <button onclick="endTest()">終了</button>
-        
-        <input type="file" id="fileInput" accept=".json">
-        <button onclick="loadProblems()">問題ファイル読み込み</button>
 
     </div>
 
@@ -193,37 +204,47 @@ nav ul a:active {
 <script>
     let problems = [];
     function loadProblems(){
-        const file = document.getElementById("fileInput").files[0];
-        if(!file){
-            alert("ファイルを選択してください");
+        const mode = document.getElementById("inputMode").value;
+    
+        if(mode==="paste"){
+            const text = document.getElementById("pasteInput").value.trim();
+            if(!text){ alert("入力してください"); return; }
+            try{
+                problems = JSON.parse(text);
+            }catch{
+                alert("JSON形式が不正です");
+                return;
+            }
+        }
+        else{
+            const file = document.getElementById("fileInput").files[0];
+            if(!file){ alert("ファイルを選択してください"); return; }
+    
+            const reader = new FileReader();
+            reader.onload = e=>{
+                try{
+                    problems = JSON.parse(e.target.result);
+                    afterLoad();
+                }catch{
+                    alert("JSON形式が不正です");
+                }
+            };
+            reader.readAsText(file);
             return;
         }
     
-        const reader = new FileReader();
-    
-        reader.onload = e=>{
-            try{
-                const data = JSON.parse(e.target.result);
-    
-                if(!Array.isArray(data)){
-                    alert("形式が正しくありません");
-                    return;
-                }
-    
-                problems = data;
-    
-                // ALLの値を更新
-                document.querySelector('#numQuestions option:last-child').value = problems.length;
-    
-                alert("読み込み完了：" + problems.length + "問");
-            }
-            catch{
-                alert("JSON形式が不正です");
-            }
-        };
-    
-        reader.readAsText(file);
+        afterLoad();
     }
+    
+    function afterLoad(){
+        if(!Array.isArray(problems)){
+            alert("形式が正しくありません");
+            return;
+        }
+        document.querySelector('#numQuestions option:last-child').value = problems.length;
+        alert("読み込み完了：" + problems.length + "問");
+    }
+
 
 
     // ALLオプションのvalueを問題数に設定
@@ -408,6 +429,12 @@ nav ul a:active {
             resultContainer.textContent = "間違えた問題がありません。";
             resultContainer.style.display = 'block';
         }
+    }
+
+    function switchInputMode(){
+        const mode = document.getElementById("inputMode").value;
+        document.getElementById("pasteArea").style.display = mode==="paste"?"block":"none";
+        document.getElementById("fileArea").style.display  = mode==="file" ?"block":"none";
     }
 
 </script>
