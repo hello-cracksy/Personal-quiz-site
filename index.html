@@ -246,6 +246,11 @@ hr {
         <p>現在保存されている間違い数：<span id="settingsMistakeCount">0</span>問</p>
         <button onclick="exportSavedMistakesFile()">セーブファイルを出力（ダウンロード）</button>
         <button onclick="clearSavedMistakes()">セーブデータを全削除</button>
+
+        <div class="settings-row" style="margin-top:1.5em;">
+            <input type="file" id="importFileInput" accept=".json" onchange="importSavedMistakesFile(event)">
+        </div>
+        <p class="hint">セーブファイル（.json）を選択すると、現在のセーブデータに読み込んだ内容が合体されます（同じ問題があれば連続正解数の高い方を採用）。</p>
     </div>
 
     <div id="question-container">
@@ -412,6 +417,53 @@ hr {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+
+    // セーブファイル（.json）の読み込み・インポート
+    function importSavedMistakesFile(event){
+        const file = event.target.files[0];
+        if(!file) return;
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            let imported;
+            try{
+                imported = JSON.parse(e.target.result);
+            }catch{
+                alert("JSON形式が不正です");
+                event.target.value = "";
+                return;
+            }
+            importMistakesData(imported);
+            event.target.value = ""; // 同じファイルを再選択できるようにする
+        };
+        reader.readAsText(file);
+    }
+
+    function importMistakesData(importedArray){
+        if(!Array.isArray(importedArray)){
+            alert("セーブファイルの形式が正しくありません");
+            return;
+        }
+
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        importedArray.forEach(item=>{
+            if(!item || typeof item.question !== 'string' || typeof item.answer !== 'string') return;
+            const streak = typeof item.streak === 'number' ? item.streak : 0;
+            const existing = savedMistakes.find(sm => sm.question === item.question && sm.answer === item.answer);
+            if(existing){
+                existing.streak = Math.max(existing.streak || 0, streak);
+                updatedCount++;
+            } else {
+                savedMistakes.push({ question: item.question, answer: item.answer, streak });
+                addedCount++;
+            }
+        });
+
+        persistSavedMistakes();
+        alert(`セーブファイルを読み込みました（新規: ${addedCount}問 / 更新: ${updatedCount}問 / 合計: ${savedMistakes.length}問）`);
     }
 
     // 通常テストで間違えた問題をセーブデータへマージ（同じ問題があれば連続正解数をリセット）
