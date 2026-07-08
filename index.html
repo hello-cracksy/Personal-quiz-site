@@ -59,6 +59,7 @@ body {
 
 /* 入力 */
 input[type="text"],
+input[type="number"],
 select {
     border: 1px solid #aaa;
     outline: none;
@@ -74,7 +75,12 @@ input[type="text"] {
     width: 220px;
 }
 
+input[type="number"] {
+    width: 100px;
+}
+
 input[type="text"]:focus,
+input[type="number"]:focus,
 select:focus {
     border-color: #666;
 }
@@ -109,10 +115,42 @@ nav ul a:active {
     font-size: 18px;
 }
 
+.back-button {
+    background: #eee;
+}
+
 /* テキスト */
 #result, #question {
     font-size: 26px;
     letter-spacing: normal;
+}
+
+.screen-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 1.5em 2em;
+    max-width: 640px;
+}
+
+.settings-row {
+    margin: 1.2em 0;
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    flex-wrap: wrap;
+}
+
+.hint {
+    color: #666;
+    font-size: 13px;
+    margin: 0.2em 0 0.6em 0;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 1.5em 0;
 }
 
 /* 初期非表示 */
@@ -120,7 +158,9 @@ nav ul a:active {
 #result,
 #mistakes-title,
 #result-buttons,
-#resultTable thead {
+#resultTable thead,
+#setup-screen,
+#settings-screen {
     display: none;
 }
 
@@ -140,38 +180,72 @@ nav ul a:active {
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KTHSXR8K"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
-    <h1>小テスト対策</h1>
+    <!-- ホーム画面 -->
+    <div id="home-screen" class="screen-card">
+        <h1>小テスト対策</h1>
+        <button onclick="showScreen('setup-screen')">スタート</button>
+        <button onclick="goMistakesOnly()">間違えた問題だけ（<span id="mistakeCount">0</span>問）</button>
+        <button onclick="openSettings()">設定</button>
+    </div>
 
-    <div id="start-controls">
-        <select id="numQuestions">
-            <option value="1">1問</option>
-            <option value="3">3問</option>
-            <option value="10">10問</option>
-            <option value="25">25問</option>
-            <option value="50" selected>ALL</option>
-        </select>
-        <select id="order">
-            <option value="random">ランダム</option>
-            <option value="sequential">順番どうり</option>
-        </select>
-        <select id="inputMode" onchange="switchInputMode()">
-          <option value="paste">テキスト貼り付け</option>
-          <option value="file">ファイル読み込み</option>
-        </select>
-        <div id="pasteArea">
-        <textarea id="pasteInput" style="width:100%;height:140px;"></textarea>
+    <!-- 問題設定画面 -->
+    <div id="setup-screen" class="screen-card">
+        <button class="back-button" onclick="showScreen('home-screen')">← ホームに戻る</button>
+        <h1>小テスト対策</h1>
+        <div id="start-controls">
+            <select id="numQuestions">
+                <option value="1">1問</option>
+                <option value="3">3問</option>
+                <option value="10">10問</option>
+                <option value="25">25問</option>
+                <option value="50" selected>ALL</option>
+            </select>
+            <select id="order">
+                <option value="random">ランダム</option>
+                <option value="sequential">順番どうり</option>
+            </select>
+            <select id="inputMode" onchange="switchInputMode()">
+              <option value="paste">テキスト貼り付け</option>
+              <option value="file">ファイル読み込み</option>
+            </select>
+            <div id="pasteArea">
+            <textarea id="pasteInput" style="width:100%;height:140px;"></textarea>
+            </div>
+
+            <div id="fileArea" style="display:none;">
+            <input type="file" id="fileInput" accept=".json">
+            </div>
+
+            <button onclick="loadProblems()">問題読み込み</button>
+
+            <button onclick="startTest()">スタート</button>
+
+            <button onclick="endTest()">終了</button>
+
         </div>
-        
-        <div id="fileArea" style="display:none;">
-        <input type="file" id="fileInput" accept=".json">
+    </div>
+
+    <!-- 設定画面 -->
+    <div id="settings-screen" class="screen-card">
+        <button class="back-button" onclick="showScreen('home-screen')">← ホームに戻る</button>
+        <h1>設定</h1>
+
+        <div class="settings-row">
+            <label for="removeThreshold">間違えた問題を連続何回正解したらセーブファイルから削除するか：</label>
         </div>
-        
-        <button onclick="loadProblems()">問題読み込み</button>
+        <div class="settings-row">
+            <input type="number" id="removeThreshold" min="1" value="3">
+            <button onclick="saveSettingsFromUI()">保存</button>
+            <span id="settingsSavedMsg" style="display:none;color:#2e7d32;">保存しました</span>
+        </div>
+        <p class="hint">「間違えた問題だけをする」モードで、1つの問題に連続でこの回数正解すると、その問題はセーブファイルから自動的に削除されます。</p>
 
-        <button onclick="startTest()">スタート</button>
+        <hr>
 
-        <button onclick="endTest()">終了</button>
-
+        <h2>セーブデータ</h2>
+        <p>現在保存されている間違い数：<span id="settingsMistakeCount">0</span>問</p>
+        <button onclick="exportSavedMistakesFile()">セーブファイルを出力（ダウンロード）</button>
+        <button onclick="clearSavedMistakes()">セーブデータを全削除</button>
     </div>
 
     <div id="question-container">
@@ -193,19 +267,25 @@ nav ul a:active {
         <tbody>
         </tbody>
     </table>
-    
+
     <div id="result-buttons">
         <button onclick="startTest()">リセット</button>
         <button id="retry-button" onclick="retryMistakes()">リトライ</button>
+        <button id="save-mistakes-button" onclick="saveMistakesButtonHandler()">間違いをセーブファイルに保存</button>
+        <button onclick="goHome()">ホームに戻る</button>
     </div>
 
     <audio id="correctSound" src="https://suiship.github.io/sist/correct.mp3" preload="auto"></audio>
 
 <script>
     let problems = [];
+    let settings = { removeThreshold: 3 };
+    let savedMistakes = [];
+    let isMistakesMode = false;
+
     function loadProblems(){
         const mode = document.getElementById("inputMode").value;
-    
+
         if(mode==="paste"){
             const text = document.getElementById("pasteInput").value.trim();
             if(!text){ alert("入力してください"); return; }
@@ -219,7 +299,7 @@ nav ul a:active {
         else{
             const file = document.getElementById("fileInput").files[0];
             if(!file){ alert("ファイルを選択してください"); return; }
-    
+
             const reader = new FileReader();
             reader.onload = e=>{
                 try{
@@ -232,10 +312,10 @@ nav ul a:active {
             reader.readAsText(file);
             return;
         }
-    
+
         afterLoad();
     }
-    
+
     function afterLoad(){
         if(!Array.isArray(problems)){
             alert("形式が正しくありません");
@@ -245,15 +325,133 @@ nav ul a:active {
         alert("読み込み完了：" + problems.length + "問");
     }
 
-
-
-    // ALLオプションのvalueを問題数に設定
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelector('#numQuestions option[value="50"]').value = problems.length;
-    });
-
     let results = [];
     let currentProblems = [];
+
+    // ===== 画面切り替え =====
+    function showScreen(id){
+        ['home-screen','setup-screen','settings-screen'].forEach(s=>{
+            document.getElementById(s).style.display = (s===id) ? 'block' : 'none';
+        });
+    }
+
+    function goHome(){
+        isMistakesMode = false;
+        document.getElementById('question-container').style.display = 'none';
+        document.getElementById('result-buttons').style.display = 'none';
+        document.getElementById('mistakes-title').style.display = 'none';
+        document.getElementById('resultTable').querySelector('thead').style.display = 'none';
+        document.getElementById('result').style.display = 'none';
+        showScreen('home-screen');
+    }
+
+    // ===== 設定の読み書き =====
+    function loadSettings(){
+        const s = localStorage.getItem('quizSettings');
+        if(s){
+            try{ settings = JSON.parse(s); }catch{ settings = { removeThreshold: 3 }; }
+        }
+        if(!settings.removeThreshold || settings.removeThreshold < 1){
+            settings.removeThreshold = 3;
+        }
+    }
+
+    function saveSettingsFromUI(){
+        const v = parseInt(document.getElementById('removeThreshold').value, 10);
+        settings.removeThreshold = (v && v > 0) ? v : 3;
+        localStorage.setItem('quizSettings', JSON.stringify(settings));
+        const msg = document.getElementById('settingsSavedMsg');
+        msg.style.display = 'inline';
+        setTimeout(()=>{ msg.style.display = 'none'; }, 1500);
+    }
+
+    function openSettings(){
+        document.getElementById('removeThreshold').value = settings.removeThreshold;
+        updateMistakeCountDisplays();
+        showScreen('settings-screen');
+    }
+
+    // ===== セーブされた間違いの読み書き =====
+    function loadSavedMistakes(){
+        const s = localStorage.getItem('savedMistakes');
+        if(s){
+            try{ savedMistakes = JSON.parse(s); }catch{ savedMistakes = []; }
+        }
+        if(!Array.isArray(savedMistakes)) savedMistakes = [];
+        updateMistakeCountDisplays();
+    }
+
+    function persistSavedMistakes(){
+        localStorage.setItem('savedMistakes', JSON.stringify(savedMistakes));
+        updateMistakeCountDisplays();
+    }
+
+    function updateMistakeCountDisplays(){
+        const c1 = document.getElementById('mistakeCount');
+        const c2 = document.getElementById('settingsMistakeCount');
+        if(c1) c1.textContent = savedMistakes.length;
+        if(c2) c2.textContent = savedMistakes.length;
+    }
+
+    function clearSavedMistakes(){
+        if(savedMistakes.length === 0){ alert("セーブデータはありません"); return; }
+        if(!confirm("保存されている間違いを全て削除しますか？")) return;
+        savedMistakes = [];
+        persistSavedMistakes();
+        alert("削除しました");
+    }
+
+    function exportSavedMistakesFile(){
+        if(savedMistakes.length === 0){ alert("保存されている間違いはありません"); return; }
+        const blob = new Blob([JSON.stringify(savedMistakes, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mistakes_save.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // 通常テストで間違えた問題をセーブデータへマージ（同じ問題があれば連続正解数をリセット）
+    function mergeMistakesIntoSave(newMistakes){
+        newMistakes.forEach(m=>{
+            const existing = savedMistakes.find(sm => sm.question === m.question && sm.answer === m.answer);
+            if(existing){
+                existing.streak = 0;
+            } else {
+                savedMistakes.push({ question: m.question, answer: m.answer, streak: 0 });
+            }
+        });
+        persistSavedMistakes();
+    }
+
+    function saveMistakesButtonHandler(){
+        const mistakes = results.filter(r => !r.isCorrect).map(r => ({ question: r.question, answer: r.answer }));
+        if(mistakes.length === 0){ alert("間違えた問題がありません"); return; }
+        mergeMistakesIntoSave(mistakes);
+        exportSavedMistakesFile();
+        alert("セーブファイルに保存し、ダウンロードしました");
+    }
+
+    // 「間違えた問題だけ」モードの開始
+    function goMistakesOnly(){
+        if(savedMistakes.length === 0){ alert("保存されている間違いはありません"); return; }
+        isMistakesMode = true;
+        results = [];
+        currentProblems = fisherYatesShuffle(
+            savedMistakes.map(m => ({ question: m.question, answer: m.answer }))
+        );
+        resetUI();
+        showScreen('home-screen'); // 一旦全画面を隠す土台として使う
+        document.getElementById('home-screen').style.display = 'none';
+        document.getElementById('question-container').style.display = 'block';
+        document.getElementById('answer').disabled = false;
+        document.getElementById('answer').value = "";
+        document.getElementById('answer').focus();
+        showNextProblem();
+    }
 
     // Fisher-Yates shuffle ってやつ
     function fisherYatesShuffle(array) {
@@ -265,18 +463,19 @@ nav ul a:active {
     }
 
     function startTest() {
-        currentProblems = []; 
+        isMistakesMode = false;
+        currentProblems = [];
         resetUI();
 
         const numQuestions = parseInt(document.getElementById("numQuestions").value);
         const isRandom = document.getElementById("order").value === "random";
-        
+
         let problemsToTest = problems.slice();
         if (isRandom) {
             problemsToTest = fisherYatesShuffle(problemsToTest);
         }
         currentProblems = problemsToTest.slice(0, numQuestions);
-        
+
         if (currentProblems.length > 0) {
             // UIを切り替え
             document.getElementById("question-container").style.display = 'block';
@@ -322,6 +521,22 @@ nav ul a:active {
             isCorrect: isCorrect
         });
 
+        // 「間違えた問題だけ」モードの場合、セーブデータの連続正解数を更新
+        if (isMistakesMode) {
+            const entry = savedMistakes.find(sm => sm.question === currentProblem.question && sm.answer === currentProblem.answer);
+            if (entry) {
+                if (isCorrect) {
+                    entry.streak = (entry.streak || 0) + 1;
+                    if (entry.streak >= settings.removeThreshold) {
+                        savedMistakes = savedMistakes.filter(sm => sm !== entry);
+                    }
+                } else {
+                    entry.streak = 0;
+                }
+                persistSavedMistakes();
+            }
+        }
+
             if (isCorrect) {
             resultElement.textContent = "正解！";
             resultElement.style.color = '#4CAF50';
@@ -332,7 +547,7 @@ nav ul a:active {
             confirmButton.disabled = true;
             resultElement.style.color = '#ff2222';
             resultElement.innerHTML = `不正解: <span class="correctAnswer">${currentProblem.answer}</span>`;
-            
+
             const utterance = new SpeechSynthesisUtterance(currentProblem.answer);
             utterance.lang = 'en-US';
             speechSynthesis.speak(utterance);
@@ -356,7 +571,7 @@ nav ul a:active {
     function showResults() {
         const tableBody = document.getElementById("resultTable").querySelector('tbody');
         tableBody.innerHTML = '';
-        
+
         let correctAnswers = 0;
         let hasMistakes = false;
 
@@ -371,7 +586,7 @@ nav ul a:active {
                 tr.insertCell().textContent = result.userAnswer || '';
             }
         });
-        
+
         const accuracy = results.length > 0 ? (correctAnswers / results.length) * 100 : 0;
         const resultContainer = document.getElementById("result");
         resultContainer.innerHTML = `正答率: ${accuracy.toFixed(1)}% (${correctAnswers}/${results.length})`;
@@ -379,7 +594,7 @@ nav ul a:active {
 
         document.getElementById("question-container").style.display = 'none';
         document.getElementById("result-buttons").style.display = 'block';
-        
+
         if (hasMistakes) {
             document.getElementById('mistakes-title').style.display = 'block';
             document.getElementById("resultTable").querySelector('thead').style.display = 'table-header-group';
@@ -388,11 +603,14 @@ nav ul a:active {
             document.getElementById("resultTable").querySelector('thead').style.display = 'none';
         }
         document.getElementById('retry-button').style.display = hasMistakes ? 'inline-block' : 'none';
+
+        // 「間違いをセーブ」ボタンは通常モードで間違いがあるときだけ表示
+        document.getElementById('save-mistakes-button').style.display = (hasMistakes && !isMistakesMode) ? 'inline-block' : 'none';
     }
 
     function resetUI() {
         results = [];
-        
+
         document.getElementById("question-container").style.display = 'none';
         document.getElementById("result").style.display = 'none';
         document.getElementById("mistakes-title").style.display = 'none';
@@ -400,12 +618,12 @@ nav ul a:active {
         document.getElementById("resultTable").querySelector('tbody').innerHTML = '';
         document.getElementById("result-buttons").style.display = 'none';
     }
-    
+
     function endTest(){
         if(currentProblems.length === 0 && results.length === 0) return;
-    
+
         if(!confirm("テストを終了しますか？")) return;
-    
+
         currentProblems = [];
         showResults();
     }
@@ -415,14 +633,14 @@ nav ul a:active {
         currentProblems = results
             .filter(result => !result.isCorrect)
             .map(p => ({ question: p.question, answer: p.answer }));
-        
+
         if (currentProblems.length > 0) {
             resetUI();
-            
+
             document.getElementById("question-container").style.display = 'block';
             document.getElementById("answer").disabled = false;
             document.getElementById('answer').focus();
-            
+
             showNextProblem();
         } else {
             const resultContainer = document.getElementById("result");
@@ -436,6 +654,15 @@ nav ul a:active {
         document.getElementById("pasteArea").style.display = mode==="paste"?"block":"none";
         document.getElementById("fileArea").style.display  = mode==="file" ?"block":"none";
     }
+
+    // ===== 初期化 =====
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelector('#numQuestions option[value="50"]').value = problems.length;
+        loadSettings();
+        loadSavedMistakes();
+        document.getElementById('removeThreshold').value = settings.removeThreshold;
+        showScreen('home-screen');
+    });
 
 </script>
 </body>
