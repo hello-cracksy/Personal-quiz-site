@@ -183,6 +183,10 @@ hr {
     <!-- ホーム画面 -->
     <div id="home-screen" class="screen-card">
         <h1>小テスト対策</h1>
+        <div id="resume-row" style="display:none;">
+            <button id="resume-button" onclick="resumeProgress()">続きから再開（残り<span id="resumeCount">0</span>問）</button>
+            <button class="back-button" onclick="discardProgress()">破棄</button>
+        </div>
         <button onclick="showScreen('setup-screen')">スタート</button>
         <button onclick="goMistakesOnly()">間違えた問題だけ（<span id="mistakeCount">0</span>問）</button>
         <button onclick="openSettings()">設定</button>
@@ -254,6 +258,7 @@ hr {
     </div>
 
     <div id="question-container">
+        <button class="back-button" onclick="pauseAndGoHome()">中断してホームに戻る（自動セーブ）</button>
         <p id="question"></p>
         <input type="text" id="answer" spellcheck="false" autocorrect="off" autocomplete="off" autofocus>
         <button type="button" onclick="checkAnswer()" class="send_button">確定</button>
@@ -374,6 +379,77 @@ hr {
         document.getElementById('removeThreshold').value = settings.removeThreshold;
         updateMistakeCountDisplays();
         showScreen('settings-screen');
+    }
+
+    // ===== 解いている途中の進行状況（セーブ＆再開） =====
+    function saveProgress(){
+        if(!currentProblems || currentProblems.length === 0){
+            clearProgress();
+            return;
+        }
+        const progress = {
+            isMistakesMode: isMistakesMode,
+            currentProblems: currentProblems,
+            results: results,
+            savedAt: Date.now()
+        };
+        localStorage.setItem('quizProgress', JSON.stringify(progress));
+        updateResumeButtonVisibility();
+    }
+
+    function loadProgress(){
+        const s = localStorage.getItem('quizProgress');
+        if(!s) return null;
+        try{ return JSON.parse(s); }catch{ return null; }
+    }
+
+    function clearProgress(){
+        localStorage.removeItem('quizProgress');
+        updateResumeButtonVisibility();
+    }
+
+    function updateResumeButtonVisibility(){
+        const progress = loadProgress();
+        const row = document.getElementById('resume-row');
+        const countEl = document.getElementById('resumeCount');
+        if(!row) return;
+        if(progress && Array.isArray(progress.currentProblems) && progress.currentProblems.length > 0){
+            row.style.display = 'block';
+            if(countEl) countEl.textContent = progress.currentProblems.length;
+        } else {
+            row.style.display = 'none';
+        }
+    }
+
+    function resumeProgress(){
+        const progress = loadProgress();
+        if(!progress || !Array.isArray(progress.currentProblems) || progress.currentProblems.length === 0){
+            alert("再開できる進行状況がありません");
+            updateResumeButtonVisibility();
+            return;
+        }
+        isMistakesMode = !!progress.isMistakesMode;
+        currentProblems = progress.currentProblems;
+        results = Array.isArray(progress.results) ? progress.results : [];
+
+        document.getElementById('home-screen').style.display = 'none';
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('settings-screen').style.display = 'none';
+        document.getElementById('question-container').style.display = 'block';
+        document.getElementById('answer').disabled = false;
+        document.getElementById('answer').value = '';
+        document.getElementById('answer').focus();
+        showNextProblem();
+    }
+
+    function discardProgress(){
+        if(!confirm("保存されている進行状況を削除しますか？")) return;
+        clearProgress();
+    }
+
+    function pauseAndGoHome(){
+        saveProgress();
+        goHome();
     }
 
     // ===== セーブされた間違いの読み書き =====
@@ -502,6 +578,7 @@ hr {
         document.getElementById('answer').disabled = false;
         document.getElementById('answer').value = "";
         document.getElementById('answer').focus();
+        saveProgress();
         showNextProblem();
     }
 
@@ -534,6 +611,7 @@ hr {
             document.getElementById("answer").disabled = false;
             document.getElementById("answer").value = "";
             document.getElementById('answer').focus();
+            saveProgress();
             showNextProblem();
         }
     }
@@ -594,6 +672,7 @@ hr {
             resultElement.style.color = '#4CAF50';
             document.getElementById('correctSound').play().catch(e => console.warn('音声の再生に失敗:', e));
             currentProblems.shift();
+            saveProgress();
             setTimeout(showNextProblem, 80);
         } else {
             confirmButton.disabled = true;
@@ -606,6 +685,7 @@ hr {
 
             setTimeout(() => {
                 currentProblems.shift();
+                saveProgress();
                 confirmButton.disabled = false;
                 showNextProblem();
             }, 1800);
@@ -621,6 +701,7 @@ hr {
     });
 
     function showResults() {
+        clearProgress();
         const tableBody = document.getElementById("resultTable").querySelector('tbody');
         tableBody.innerHTML = '';
 
@@ -693,6 +774,7 @@ hr {
             document.getElementById("answer").disabled = false;
             document.getElementById('answer').focus();
 
+            saveProgress();
             showNextProblem();
         } else {
             const resultContainer = document.getElementById("result");
@@ -714,6 +796,7 @@ hr {
         loadSavedMistakes();
         document.getElementById('removeThreshold').value = settings.removeThreshold;
         showScreen('home-screen');
+        updateResumeButtonVisibility();
     });
 
 </script>
